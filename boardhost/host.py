@@ -1,10 +1,21 @@
+"""
+A single-process host for the jrb_board.games and jrb_board.players interfaces.
+"""
 import json
 import random
 import socket
-from threading import Event
 from random import choice
-import gevent, gevent.local, gevent.queue, gevent.server
+import gevent
+import gevent.local
+import gevent.queue
+import gevent.server
 
+# pylint: disable=missing-docstring
+# pylint: disable=invalid-name
+# pylint: disable=broad-except
+# pylint: disable=fixme
+# pylint: disable=no-self-use
+# pylint: disable=too-many-instance-attributes
 
 class Client:
     def __init__(self, player, addr=None, port=None):
@@ -49,7 +60,7 @@ class Client:
         self.player.player = player
 
     def handle_decline(self, data):
-        #print(data['message'])
+        print(data['message'])
         self.running = False
 
     def handle_error(self, data):
@@ -125,7 +136,7 @@ class Server:
         self.server.serve_forever()
         #print("Server stopped")
 
-    def connection(self, sckt, address):
+    def connection(self, sckt, _): # _ = address
         #print("connection:", sckt)
         self.local.socket = sckt
         if self.player_numbers.empty():

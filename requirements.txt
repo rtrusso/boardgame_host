@@ -1,0 +1,3 @@
+-e git+https://github.com/rtrusso/mcts
+-e git+https://github.com/rtrusso/ultimate_tictactoe
+-e git+https://github.com/rtrusso/go
