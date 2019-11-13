@@ -18,9 +18,10 @@ import gevent.server
 # pylint: disable=too-many-instance-attributes
 
 class Client:
-    def __init__(self, player, addr=None, port=None):
+    def __init__(self, player, addr=None, port=None, transcript=False):
         self.player = player
         self.running = False
+        self.transcript = transcript
         self.receiver = {'player': self.handle_player,
                          'decline': self.handle_decline,
                          'error': self.handle_error,
@@ -75,9 +76,11 @@ class Client:
         action = data.get('last_action', {}).get('action') or {}
         self.player.update(state)
 
-        print(self.player.display(state, action))
+        if self.transcript:
+            print(self.player.display(state, action))
         if data.get('winners') is not None:
-            print(self.player.winner_message(data['winners']))
+            if self.transcript:
+                print(self.player.winner_message(data['winners']))
             self.running = False
         elif data['state']['player'] == self.player.player:
             self.send(self.player.get_action())

@@ -61,12 +61,15 @@ def main():
 
     clients = []
     player_spec_len = len(player_spec)
+    transcript = True
     for index in range(1, num_players+1):
         player_index = index % player_spec_len
         player_class_name = player_spec[player_index]
         player_obj = player_plugins[player_class_name]
-        clients.append(host.Client(player_obj(board(), **player_kwargs),
-                                   args.address, args.port))
+        clients.append(host.Client(player=player_obj(board(), **player_kwargs),
+                                   addr=args.address, port=args.port,
+                                   transcript=transcript))
+        transcript = False
 
     server = host.Server(board(), args.address, args.port)
 
