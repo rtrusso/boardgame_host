@@ -9,6 +9,7 @@ main script used to execute the boardgame host from the command line.
 from gevent import monkey
 monkey.patch_all()
 
+import sys
 import argparse
 from threading import Thread
 from pkg_resources import iter_entry_points
@@ -31,24 +32,39 @@ def main():
     parser = argparse.ArgumentParser(
         description="Play a boardgame using a specified player type.")
     parser.add_argument('game', choices=sorted(board_plugins))
-    parser.add_argument('player', choices=sorted(player_plugins))
+    parser.add_argument('player', choices=sorted(player_plugins), nargs='+')
     parser.add_argument('address', nargs='?')
     parser.add_argument('port', nargs='?', type=int)
     parser.add_argument('-e', '--extra', action='append')
 
     args = parser.parse_args()
 
-    print("game: %s" %(args.game))
-    print("player: %s" %(args.player))
-
     board = board_plugins[args.game]
-    player_obj = player_plugins[args.player]
-    player_kwargs = dict(arg.split('=') for arg in args.extra or ())
-
     brd = board()
     num_players = brd.num_players
+    player_spec = []
+    for p in args.player:
+        player_spec.append(p)
+
+    print("game:      %s" %(args.game))
+    print("# players: %s" %(num_players))
+
+    if len(player_spec) > num_players:
+        print("too many players specified for game")
+        sys.exit(1)
+
+    while len(player_spec) < num_players:
+        player_spec.append(player_spec[-1])
+
+    print("player:    %s" %(player_spec))
+    player_kwargs = dict(arg.split('=') for arg in args.extra or ())
+
     clients = []
-    for _ in range(1, num_players+1):
+    player_spec_len = len(player_spec)
+    for index in range(1, num_players+1):
+        player_index = index % player_spec_len
+        player_class_name = player_spec[player_index]
+        player_obj = player_plugins[player_class_name]
         clients.append(host.Client(player_obj(board(), **player_kwargs),
                                    args.address, args.port))
 
@@ -69,5 +85,6 @@ def main():
 
     server.server.stop()
     s_t.join()
+    sys.exit(0)
 
 main()
