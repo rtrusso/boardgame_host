@@ -10,7 +10,8 @@ setup(
     entry_points={
         'jrb_board.games': [],
         'jrb_board.players': ['human = boardhost.host:HumanPlayer',
-                              'random = boardhost.host:RandomPlayer'],
+                              'random = boardhost.host:RandomPlayer',
+                              'random2 = boardhost.host:RandomPlayer'],
     },
     license='LICENSE',
     description="A generic board game host program.",

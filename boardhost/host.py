@@ -18,8 +18,9 @@ import gevent.server
 # pylint: disable=too-many-instance-attributes
 
 class Client:
-    def __init__(self, player, addr=None, port=None, transcript=False):
+    def __init__(self, player, player_class, addr=None, port=None, transcript=False): # pylint: disable=too-many-arguments
         self.player = player
+        self.player_class = player_class
         self.running = False
         self.transcript = transcript
         self.receiver = {'player': self.handle_player,
@@ -79,9 +80,10 @@ class Client:
         if self.transcript:
             print(self.player.display(state, action))
         if data.get('winners') is not None:
-            if self.transcript:
-                print(self.player.winner_message(data['winners']))
             self.running = False
+            if self.transcript:
+                msg = self.player.winner_message(data['winners'])
+                print('%s' %(msg))
         elif data['state']['player'] == self.player.player:
             self.send(self.player.get_action())
 
@@ -91,16 +93,21 @@ class Client:
 
 
 class Server:
-    def __init__(self, board, addr=None, port=None):
+    def __init__(self, board, player_classes, transcript=False, addr=None, port=None):
+        # pylint: disable=too-many-arguments
         self.board = board
         self.states = []
         self.local = gevent.local.local()
         self.server = None
+        self.transcript = transcript
+        self.player_classes = player_classes
         # player message queues
         self.players = dict((x, gevent.queue.Queue())
                             for x in range(1, self.board.num_players+1))
         # random player selection
         self.player_numbers = gevent.queue.JoinableQueue()
+
+        self.results = gevent.queue.Queue()
 
         self.addr = addr if addr is not None else '127.0.0.1'
         self.port = port if port is not None else 4242
@@ -137,7 +144,6 @@ class Server:
                                                  handle=self.connection)
         #print("Starting server...")
         self.server.serve_forever()
-        #print("Server stopped")
 
     def connection(self, sckt, _): # _ = address
         #print("connection:", sckt)
@@ -161,7 +167,10 @@ class Server:
                 self.send(data)
                 if data.get('winners') is not None:
                     self.local.run = False
-
+                    if self.local.player == 1:
+                        # the comparison with 1 is just to ensure this code runs only
+                        # once per game win.
+                        self.process_winners(data)
                 elif data.get('state', {}).get('player') == self.local.player:
                     message = ''
                     while not message.endswith('\r\n'):
@@ -176,6 +185,23 @@ class Server:
                 self.players[self.local.player].put_nowait(data)
                 self.local.run = False
         self.player_numbers.task_done()
+
+    def process_winners(self, data):
+        winners = data.get('winners')
+        winning_players = self.board.winning_players(winners)
+        msg = self.board.winner_message(winners)
+        if self.transcript:
+            print("%s" %(msg))
+        key = '<draw>'
+        if len(winning_players) > 0:
+            key = prefix = ''
+            for p in winning_players:
+                class_name = self.player_classes[p-1]
+                key = key + prefix + class_name
+                prefix = '+'
+        win_record = {'message': msg,
+                      'class_name': key}
+        self.results.put_nowait(win_record)
 
     def parse(self, msg):
         #print("Server.parse '%s' %s" %(self.local.player, msg))
