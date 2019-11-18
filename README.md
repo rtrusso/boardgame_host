@@ -39,5 +39,4 @@ Planned Improvements
 --------------------
 
 - Make this more efficient, without sockets and http in the middle
-- Experiments with many test runs
-- Aggregate data for win-loss, performance, etc.
+- Persist stats from test runs for later analysis
